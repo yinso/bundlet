@@ -12,10 +12,10 @@ In your package.json
 
     browser: { // this is the same browser field used by browserify
       jquery: false
-      ,,,,
+      ....v
     }
     
-    bundlet {
+    bundlet: {
       shim: {
         jquery: {
           external: 'window.$', // external is a direct text substitution. 
@@ -55,19 +55,19 @@ Compile from command line.
 `./public/js/foo.js` now looks like
 
     // module: jquery
-    _Module_jquery = window.$;
+    var _Module_jquery = window.$;
     // module: ./baz.js
-    _Module___baz_js = (function () {
+    var _Module___baz_js = (function () {
        ... 
     })();
     // module: ./bar.js
-    _Module___bar_js = (function() {
+    var _Module___bar_js = (function() {
       var jquery = _Module_jquery;
       var Baz = _Module_baz_js;
       ... 
     })();
     // module: ./foo.js
-    _Module___foo_js = (function () {
+    var _Module___foo_js = (function () {
       var jquery = _Module_jquery;
       var Bar = _Module___bar_js;
       var Baz = _Module___baz_js;
