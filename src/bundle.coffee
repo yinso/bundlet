@@ -9,6 +9,7 @@ parser = require './parser'
 coffee = require 'coffee-script'
 _ = require 'underscore'
 builtin = require './builtin'
+jsYaml = require 'js-yaml'
 
 defaultOpts = { basedir: process.cwd(), extensions: ['.js', '.coffee']}
 
@@ -71,12 +72,17 @@ dependsRecur = (spec, options, cb) ->
       result
   
   compile = (filePath, data) ->
-    compiled = 
-      if path.extname(filePath) == '.coffee'
-        coffee.compile data
+    switch path.extname(filePath)
+      when '.coffee'
+        parser.parse coffee.compile data
+      when '.js'
+        parser.parse data
+      when '.json'
+        "module.exports = " + data + ";"
+      when '.yml', '.yaml'
+        "module.exports = " + JSON.stringify(jsYaml.safeLoad(data)) + ";"
       else
-        data
-    parser.parse compiled
+        throw new Error("unknown_file_extension: #{path.extname(filePath)} @ #{filePath}")
   
   detect = (filePath, content) ->
     required = _.filter content, (item) -> item instanceof Object and item.require
@@ -90,7 +96,7 @@ dependsRecur = (spec, options, cb) ->
         item.require
   
   normalizeName = (key, relPath) ->
-    result = key.replace /[\/\.]/g, '_'
+    result = key.replace /[\/\.\-\\]/g, '_'
     "_Module_#{result}"
   
   parse = (filePath, key, relPath, cb) ->
@@ -171,12 +177,16 @@ dependsRecur = (spec, options, cb) ->
       options.modules = builtin
       depends spec, options, cb
 
-topsort = (mod, result = []) ->
-  #loglet.warn 'topsort', mod.name, mod.key, mod.relPath, (child.spec for child in mod.depends)
-  for {spec, module} in mod.depends 
-    if not _.contains result, module 
-      topsort module, result
-  result.push mod
+topsort = (mod) ->
+  included = {}
+  result = []
+  helper = (mod) ->
+    for {spec, module}, i in mod.depends
+      if not included.hasOwnProperty(module.key)
+        helper module
+    included[mod.key] = mod
+    result.push mod
+  helper mod
   result
 
 transform = (mod) ->
@@ -220,13 +230,33 @@ transform = (mod) ->
   else
     throw {error: 'invalid_module_structure', module: mod}
 
-bundle = (spec, cb) ->
+showDepends = (mods) ->
+  loglet.log '------- MODULE DEPENDENCY ------------'
+  for mod in mods
+    item = 
+      key: mod.key
+      name: mod.name
+      relPath: mod.relPath
+      depends: mod.depends
+      exports: mod.exports 
+      external: mod.external
+    loglet.log '----------------------------------------'
+    loglet.log item
+  loglet.log '------- END MODULE DEPENDENCY ------------'
+
+bundle = (spec, options, cb) ->
+  if arguments.length == 2
+    cb = options
+    options = {}
   dependsRecur spec, (err, res) ->
     if err
       cb err
     else
       try 
-        cb null, (transform(mod) for mod in topsort(res))
+        sorted = topsort(res)
+        if options.depends 
+          showDepends sorted
+        cb null, (transform(mod) for mod in sorted)
       catch e
         cb e
 

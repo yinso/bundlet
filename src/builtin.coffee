@@ -3,6 +3,7 @@ module.exports =
   # process needs to be available natively...
   process: require.resolve './process'
   buffer: require.resolve 'native-buffer-browserify'
+  Buffer: require.resolve 'native-buffer-browserify'
   console: require.resolve 'console-browserify'
   constants: require.resolve 'constants-browserify'
   crypto: require.resolve 'crypto-browserify'

@@ -2,7 +2,7 @@
 author: 'YC <yinso.chen@gmail.com>'
 name: 'bundlet'
 description: 'client-side Javascript packager.'
-version: '0.1.1'
+version: '0.1.2'
 repository:
   type: 'git'
   url: 'git://github.com/yinso/bundlet.git'
@@ -22,6 +22,7 @@ dependencies:
   loglet: '>=0.1.1'
   browser-resolve: =1.5.0
   graceful-fs: =3.0.5
+  js-yaml: =3.2.7
   ### leverage browserify's builtin code.
   process: =0.10.0 # all the browserify code aren't using them?
   native-buffer-browserify: =2.1.4
