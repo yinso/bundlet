@@ -4,8 +4,23 @@ funclet = require 'funclet'
 path = require 'path'
 fs = require 'fs'
 
+isAbsolute = (filePath) ->
+  filePath.indexOf('/') == 0
+
+relative = (filePath) ->
+  if filePath.indexOf('.') == 0
+    filePath
+  else
+    './' + filePath
+
+pathToSpec = (filePath) ->
+  if isAbsolute(filePath)
+    filePath
+  else 
+    relative filePath
+
 run = (argv) ->
-  bundle.bundle argv._[0], argv, (err, res) ->
+  bundle.bundle pathToSpec(argv._[0]), argv, (err, res) ->
     if err
       loglet.croak err
     else if argv.output 

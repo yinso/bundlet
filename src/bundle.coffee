@@ -36,10 +36,10 @@ findPackageJson = (filePath, cb) ->
           helper parentPath, cb
       else if stat.isFile()
         fs.readFile packageJson, 'utf8', (err, data) ->
-          if err 
+          if err
             cb err
           else
-            try 
+            try
               parsed = JSON.parse(data)
               cb null, filePath, parsed
             catch e
@@ -72,22 +72,25 @@ dependsRecur = (spec, options, cb) ->
       result
   
   compile = (filePath, data) ->
-    switch path.extname(filePath)
-      when '.coffee'
-        parser.parse coffee.compile data
-      when '.js'
-        parser.parse data
-      when '.json'
-        "module.exports = " + data + ";"
-      when '.yml', '.yaml'
-        "module.exports = " + JSON.stringify(jsYaml.safeLoad(data)) + ";"
-      else
-        throw new Error("unknown_file_extension: #{path.extname(filePath)} @ #{filePath}")
+    try
+      switch path.extname(filePath)
+        when '.coffee'
+          parser.parse coffee.compile data
+        when '.js'
+          parser.parse data
+        when '.json'
+          "module.exports = " + data + ";"
+        when '.yml', '.yaml'
+          "module.exports = " + JSON.stringify(jsYaml.safeLoad(data)) + ";"
+        else
+          throw new Error("unknown_file_extension: #{path.extname(filePath)} @ #{filePath}")
+    catch e
+      throw {error: 'compilation', filePath: filePath, inner: e}
   
   detect = (filePath, content) ->
     required = _.filter content, (item) -> item instanceof Object and item.require
-    _.uniq _.map required, (item) -> 
-      if item.global 
+    _.uniq _.map required, (item) ->
+      if item.global
         if builtin.hasOwnProperty(item.global)# we want to map against the builtin... 
           builtin[item.global]
         else
@@ -129,7 +132,7 @@ dependsRecur = (spec, options, cb) ->
     filePath = null
     relPath = null
     key = null
-    result = null 
+    result = null
     funclet
       .start (next) ->
         resolve spec, options, (err, res) ->
@@ -145,7 +148,7 @@ dependsRecur = (spec, options, cb) ->
           #next null, normalize {key: spec, filePath: spec, depends: []}
         else if filePath.match /browser-resolve\/empty\.js$/ # this is skipped - ... # skipped files are not part of the processing
           next null, normalize {key: spec, filePath: filePath, depends: [], skipped: true, name: normalizeName(spec, filePath)}
-        else 
+        else
           parse filePath, key, relPath, next
       .then (val, next) ->
         result = val
@@ -154,12 +157,12 @@ dependsRecur = (spec, options, cb) ->
       .thenMap (childSpec, next) ->
         opts = _.extend {}, options, {basedir: path.dirname(filePath), tabLevel: tabLevel + 1, parent: spec}
         depends childSpec, opts, (err, mod) ->
-          if err 
+          if err
             next err
           else
             next null, {spec: childSpec, module: mod}
       .catch(cb)
-      .done (required) -> 
+      .done (required) ->
         #  key: result.key
         #  relPath: result.relPath
         #  filePath: result.filePath
@@ -180,7 +183,13 @@ dependsRecur = (spec, options, cb) ->
 topsort = (mod) ->
   included = {}
   result = []
+  recurs = {}
   helper = (mod) ->
+    if recurs.hasOwnProperty(mod.key)
+      console.error "topsort:circular_topology", mod.key
+      return
+      #throw new Error("topsort:circular_topology: #{mod.key}")
+    recurs[mod.key] = mod
     for {spec, module}, i in mod.depends
       if not included.hasOwnProperty(module.key)
         helper module
@@ -200,14 +209,14 @@ transform = (mod) ->
     #parsed = parser.parse mod.content
     # what do we get what we parse these things?
     buffer = []
-    for item in mod.content 
+    for item, i in mod.content
       if typeof(item) == 'string'
         buffer.push item
       else if item.global
         buffer.push item.global
       else if item.require
         mapped = _.find mod.depends, (dep) -> dep.spec == item.require
-        if mapped 
+        if mapped
           buffer.push mapped.module.name
         else
           throw {error: 'unknown_mapped_spec', key: mod.key, relPath: mod.relPath, spec: item.require, depends: mod.depends}
@@ -233,12 +242,12 @@ transform = (mod) ->
 showDepends = (mods) ->
   loglet.log '------- MODULE DEPENDENCY ------------'
   for mod in mods
-    item = 
+    item =
       key: mod.key
       name: mod.name
       relPath: mod.relPath
       depends: mod.depends
-      exports: mod.exports 
+      exports: mod.exports
       external: mod.external
     loglet.log '----------------------------------------'
     loglet.log item
@@ -252,14 +261,14 @@ bundle = (spec, options, cb) ->
     if err
       cb err
     else
-      try 
+      try
         sorted = topsort(res)
-        if options.depends 
+        if options.depends
           showDepends sorted
         cb null, (transform(mod) for mod in sorted)
       catch e
         cb e
 
-module.exports = 
+module.exports =
   bundle: bundle
 

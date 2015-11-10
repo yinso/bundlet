@@ -2,7 +2,7 @@
 author: 'YC <yinso.chen@gmail.com>'
 name: 'bundlet'
 description: 'client-side Javascript packager.'
-version: '0.1.2'
+version: '0.1.4'
 repository:
   type: 'git'
   url: 'git://github.com/yinso/bundlet.git'

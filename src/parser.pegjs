@@ -6,10 +6,13 @@ token
 / chars:sourceChar+ { return chars.join(''); }
 
 nonSourceCharExp
-= string
-/ comment
-/ requireExp
+= requireExp
 / globalExp
+
+// = string
+// / comment
+// / requireExp
+// / globalExp
 
 sourceChar
 = !nonSourceCharExp c:. { return c; }
@@ -47,16 +50,19 @@ sqString
 = "'" chars:sqChar* "'" { return "'" + chars.join('') + "'"; }
 
 sqChar
-= !"'" c:. { return c; }
+= "\\'"
+/ !"'" c:. { return c; }
 
 dqString
 = '"' chars:dqChar* '"' { return '"' + chars.join('') + '"'; }
 
 dqChar
-= !'"' c:. { return c; }
+= '\\"'
+/ !'"' c:. { return c; }
 
 regExpLiteral "regular expression"
   = "/" pattern:$regExpBody "/" flags:$regExpFlags {
+      console.log('--- parse.regexp.literal', pattern, flags);
       var value = new RegExp(pattern, flags);
       return "/" + pattern + "/" + flags;
     }
@@ -94,7 +100,7 @@ requireExpSpec
 = s:string { return s.substring(1, s.length - 1); }
 
 requireExp
-= "require" _ "(" _ spec:requireExpSpec _ ")" _  { return { require: spec } }
+= "require" _ "(" _ spec:requireExpSpec _ ")"  { return { require: spec } }
 
 whitespace
 = [ \r\n\t]
